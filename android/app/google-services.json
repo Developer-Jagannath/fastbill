@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1031098231903",
+    "project_id": "fastbill-e6553",
+    "storage_bucket": "fastbill-e6553.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1031098231903:android:0183dbb03c22549f0ebfea",
+        "android_client_info": {
+          "package_name": "com.fastbill"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKGEvpfod7jJ7OTRbFlqGHHU6djq0rFbs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
