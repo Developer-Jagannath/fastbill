@@ -10,7 +10,7 @@ import {
 import CalculatorButton from '../components/UI/CalcultorButton';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {MainStackParamList} from "../navigations/StackNavigator";
-import firestore from '@react-native-firebase/firestore'; // Import Firestore
+import { getFirestore, collection, doc, setDoc } from '@react-native-firebase/firestore'; // Import Firestore methods
 
 type IScreenProps = {
   navigation: StackNavigationProp<MainStackParamList, 'Main'>;
@@ -81,17 +81,19 @@ const CalculatorScreen: FC<IScreenProps> = ({navigation}) => {
   // Function to save data to Firestore
   const saveToFirestore = async () => {
     try {
-      const uid = 'your-unique-user-id'; // Replace with actual user ID
+      const uid = Date.now(); // Use a unique ID for the document
       const billData = {
         items,
         total,
         createdAt: new Date(),
+        name:"unknown",
+        invoice:Date.now(),
+        updatedAt:new Date(),
+        paymentStatus:"paid",
       };
 
-      await firestore()
-        .collection('bills') // Collection name
-        .doc(uid) // Document ID (user ID)
-        .set(billData); // Save the bill data
+      const db = getFirestore(); // Get Firestore instance
+      await setDoc(doc(collection(db, 'bills'), uid.toString()), billData); // Save the bill data
 
       Alert.alert('Success', 'Bill saved successfully!');
     } catch (error) {
@@ -119,13 +121,14 @@ const CalculatorScreen: FC<IScreenProps> = ({navigation}) => {
       {/* Total Section */}
       <View style={styles.totalWrapper}>
         <Text style={{fontSize: 18}}>Total:</Text>
-        <Text style={{fontSize: 20, fontWeight: '600'}}>₹ {total}</Text>
+        <Text style={{fontSize: 28, fontWeight: '600'}}>₹ {total}</Text>
       </View>
       {/* Current Input Display */}
       <View style={styles.currentInputWrapper}>
         <Text style={{fontSize: 16}}>Total Items: {items.length}</Text>
         <Text style={styles.currentInputText}>{currentInput}</Text>
       </View>
+     
       {/* Buttons Section */}
       <View style={styles.buttons}>
         {/* Row 1 */}
@@ -142,8 +145,12 @@ const CalculatorScreen: FC<IScreenProps> = ({navigation}) => {
             backgroundColor="#FFA500"
             textColor="#fff"
           />
-          {/* <CalculatorButton label="." onPress={() => handlePress('.')} /> */}
-          {/* <CalculatorButton label="=" onPress={() => handlePress('=')} /> */}
+          <CalculatorButton
+            label="S"
+            onPress={() =>saveToFirestore()}
+            backgroundColor="#4C6FFF"
+            textColor="#fff"
+          />
         </View>
         {/* Row 2 */}
         <View style={styles.row}>
@@ -167,13 +174,9 @@ const CalculatorScreen: FC<IScreenProps> = ({navigation}) => {
         <View style={styles.row}>
           <CalculatorButton
             label="PR"
-            onPress={saveToFirestore} // Save to Firestore on press
+            onPress={()=>navigation.navigate('Print',{bill:items})}
           />
-          <CalculatorButton
-            label="0"
-            onPress={() => handlePress('0')}
-            flex={2}
-          />
+          <CalculatorButton label="0" onPress={() => handlePress('0')} />
           <CalculatorButton
             label="+"
             onPress={() => handlePress('+')}
@@ -181,7 +184,9 @@ const CalculatorScreen: FC<IScreenProps> = ({navigation}) => {
             textColor="#fff"
           />
         </View>
+       
       </View>
+     
     </View>
   );
 };

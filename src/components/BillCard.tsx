@@ -8,6 +8,7 @@ interface IProps {
   invoice?: string;
   data?: string;
   amount?: number;
+  date: string;
   paymentStatus?: 'Paid' | 'Unpaid' | 'Partial';
 }
 
@@ -16,6 +17,7 @@ const BillCard: React.FC<IProps> = ({
   invoice,
   data,
   amount,
+  date,
   paymentStatus = 'Paid',
 }) => {
   return (
@@ -28,6 +30,7 @@ const BillCard: React.FC<IProps> = ({
           <Text style={styles.titleText}>{name}</Text>
           <Text style={styles.invoiceText}>{invoice}</Text>
           <Text style={styles.timeText}>{data}</Text>
+          <Text style={styles.dateText}>{date}</Text>
         </View>
       </View>
 
@@ -81,6 +84,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 400,
     // color: '#4b5563',
+    color: '#9ca3af',
+  },
+  dateText: {
+    fontSize: 13,
+    fontWeight: 400,
     color: '#9ca3af',
   },
   amountWrapper: {

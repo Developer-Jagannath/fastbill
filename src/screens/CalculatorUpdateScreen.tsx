@@ -1,4 +1,4 @@
-import React, {FC, useEffect, useRef, useState} from 'react';
+import React, {FC, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -8,22 +8,68 @@ import {
   Alert,
 } from 'react-native';
 import CalculatorButton from '../components/UI/CalcultorButton';
-import {StackNavigationProp} from '@react-navigation/stack';
-import {MainStackParamList} from "../navigations/StackNavigator";
-type IScreenProps = {
-  navigation: StackNavigationProp<MainStackParamList, 'Main'>;
-};
-const CalculatorUpdateScreen: FC<IScreenProps> = ({navigation}) => {
+import {StackNavigationProp, StackScreenProps} from '@react-navigation/stack';
+import {MainStackParamList} from '../navigations/StackNavigator';
+import firestore, {
+  doc,
+  getDoc,
+  getDocs,
+  getFirestore,
+} from '@react-native-firebase/firestore'; // Import Firestore
+
+// Define the props type for CalculatorUpdateScreen
+type CalculatorUpdateScreenProps = StackScreenProps<
+  MainStackParamList,
+  'CalculatorUpdate'
+>;
+const CalculatorUpdateScreen: React.FC<CalculatorUpdateScreenProps> = ({
+  navigation,
+  route,
+}) => {
   const [currentInput, setCurrentInput] = useState('0'); // Current input displayed to the user
   const [items, setItems] = useState<number[]>([]); // List of entered items
   const [total, setTotal] = useState(0); // Total amount
   const flatListRef = useRef<FlatList>(null);
+  const {invoice} = route.params;
   useEffect(() => {
     // Scroll to the end of the FlatList when items change
     if (flatListRef.current) {
       flatListRef.current.scrollToEnd({animated: true});
     }
   }, [items]);
+  useLayoutEffect(()=>{fetchBillData()},[])
+  const fetchBillData = async () => {
+    try {
+      if (!invoice) {
+        console.error('Invoice ID is missing or invalid');
+        return;
+      }
+      const db = getFirestore();
+      console.log(invoice)
+      // const billDocRef = doc(db, 'bills', invoice); // Create a reference to the document
+      // const billSnapshot = await getDoc(billDocRef); // Fetch the document data
+      const billDocRef = db.collection('bills')
+      const querySnapshot = await getDocs(billDocRef);
+      querySnapshot.forEach(doc => {
+        if (doc.id == invoice) {
+          // doc.data() is never undefined for query doc snapshots
+          console.log(doc.id, ' => ', doc.data());
+          setItems(doc.data().items);
+          setTotal(doc.data().total);
+        }
+      });
+      console.log(billDocRef);
+
+      // if (billSnapshot.exists()) {
+      //   const billData = billSnapshot.data(); // Get the document data as an object
+      //   console.log('Bill Data:', billData);
+      // } else {
+      //   console.error('Bill document does not exist');
+      // }
+    } catch (error) {
+      console.error('Error fetching bill data:', error);
+    }
+  };
   const handlePress = (value: string) => {
     if (value === 'C') {
       // Clear all items and reset total
@@ -76,6 +122,28 @@ const CalculatorUpdateScreen: FC<IScreenProps> = ({navigation}) => {
     </TouchableOpacity>
   );
 
+  // Function to save data to Firestore
+  const saveToFirestore = async () => {
+    try {
+      const uid = 'your-unique-user-id'; // Replace with actual user ID
+      const billData = {
+        items,
+        total,
+        createdAt: new Date(),
+      };
+
+      await firestore()
+        .collection('bills') // Collection name
+        .doc(uid) // Document ID (user ID)
+        .set(billData); // Save the bill data
+
+      Alert.alert('Success', 'Bill saved successfully!');
+    } catch (error) {
+      console.error('Error saving bill:', error);
+      Alert.alert('Error', 'Failed to save bill. Please try again.');
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Display Section */}
@@ -95,15 +163,15 @@ const CalculatorUpdateScreen: FC<IScreenProps> = ({navigation}) => {
       {/* Total Section */}
       <View style={styles.totalWrapper}>
         <Text style={{fontSize: 18}}>Total:</Text>
-        <Text style={{fontSize: 20, fontWeight: '600'}}>₹ {total}</Text>
+        <Text style={{fontSize: 28, fontWeight: '600'}}>₹ {total}</Text>
       </View>
       {/* Current Input Display */}
       <View style={styles.currentInputWrapper}>
         <Text style={{fontSize: 16}}>Total Items: {items.length}</Text>
         <Text style={styles.currentInputText}>{currentInput}</Text>
       </View>
-      {/* Buttons Section */}
-      <View style={styles.buttons}>
+     {/* Buttons Section */}
+     <View style={styles.buttons}>
         {/* Row 1 */}
         <View style={styles.row}>
           <CalculatorButton
@@ -118,8 +186,12 @@ const CalculatorUpdateScreen: FC<IScreenProps> = ({navigation}) => {
             backgroundColor="#FFA500"
             textColor="#fff"
           />
-          {/* <CalculatorButton label="." onPress={() => handlePress('.')} /> */}
-          {/* <CalculatorButton label="=" onPress={() => handlePress('=')} /> */}
+          <CalculatorButton
+            label="S"
+            onPress={() =>saveToFirestore()}
+            backgroundColor="#4C6FFF"
+            textColor="#fff"
+          />
         </View>
         {/* Row 2 */}
         <View style={styles.row}>
@@ -143,13 +215,9 @@ const CalculatorUpdateScreen: FC<IScreenProps> = ({navigation}) => {
         <View style={styles.row}>
           <CalculatorButton
             label="PR"
-            onPress={() => navigation.navigate('Print', {bill: items})}
+            onPress={()=>navigation.navigate('Print',{bill:items})}
           />
-          <CalculatorButton
-            label="0"
-            onPress={() => handlePress('0')}
-            flex={2}
-          />
+          <CalculatorButton label="0" onPress={() => handlePress('0')} />
           <CalculatorButton
             label="+"
             onPress={() => handlePress('+')}
@@ -157,6 +225,7 @@ const CalculatorUpdateScreen: FC<IScreenProps> = ({navigation}) => {
             textColor="#fff"
           />
         </View>
+       
       </View>
     </View>
   );

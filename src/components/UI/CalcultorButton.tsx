@@ -18,7 +18,7 @@ const CalculatorButton: React.FC<CalculatorButtonProps> = ({
 }) => {
   return (
     <TouchableOpacity
-      activeOpacity={0.7}
+      activeOpacity={0.5}
       style={[styles.button, {backgroundColor, flex}]}
       onPress={onPress}>
       <Text style={[styles.text, {color: textColor}]}>{label}</Text>
@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     margin: 5,
-    height: 60,
+    height: 50,
     borderRadius: 8,
   },
   text: {

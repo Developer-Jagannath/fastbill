@@ -22,6 +22,7 @@ const DEFAULT_PRINTER_KEY = 'defaultPrinter';
 
 const PrintScreen = ({route}) => {
   const { bill } = route.params;
+  const totalAmount = bill.reduce((total, item) => total + item, 0);
   const [devices, setDevices] = useState([]); // Available devices
   const [connectedDevice, setConnectedDevice] = useState(null); // Currently connected device
   const [defaultPrinter, setDefaultPrinter] = useState(null); // Default printer
@@ -46,7 +47,7 @@ const PrintScreen = ({route}) => {
     printLine({textLeft: repeatTextToFitLine('-')}) +
     printLine({
       textLeft: 'TOTAL AMOUNT:',
-      textRight: '12754',
+      textRight: totalAmount.toString(),
       // bold: true,
       fontSize: 'tall',
     }) +
@@ -56,6 +57,7 @@ const PrintScreen = ({route}) => {
       textRight: `${bill.length}`,
     }) +
     "\n"+
+    printLine({textLeft: repeatTextToFitLine('-')}) +
     printLine({textLeft: 'Thanks for vist again!', alignment: 'center'})
 
   useEffect(() => {
@@ -220,7 +222,7 @@ const PrintScreen = ({route}) => {
           </Text>
         }
       />
-
+      <Text>{totalAmount}</Text>
       <Button
         title="Print Test"
         onPress={handlePrint}

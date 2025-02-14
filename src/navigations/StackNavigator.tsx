@@ -17,8 +17,9 @@ export type RootTabStackParamList = {
 const {tabBarActiveTint}=colors;
 export type MainStackParamList = {
   Main: undefined;
+  Home: undefined;
+  CalculatorUpdate: { invoice: string };
   calculator: undefined;
-  calculatorUpdate: undefined;
   Print: { bill: number[] };
 };
 
@@ -79,7 +80,7 @@ const StackNavigator = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          name="calculatorUpdate"
+          name="CalculatorUpdate"
           component={CalculatorUpdateScreen}
           options={{ headerShown: false }}
         />

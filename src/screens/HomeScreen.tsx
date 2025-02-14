@@ -1,45 +1,118 @@
-import {Button, StyleSheet, View, FlatList} from 'react-native';
-import React from 'react';
+import {
+  Button,
+  StyleSheet,
+  View,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  RefreshControl,
+} from 'react-native';
+import React, {useEffect, useState} from 'react';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {MainStackParamList} from '../navigations/StackNavigator';
 import BillCard from '../components/BillCard';
 import RoundButton from '../components/RoundButton';
 import SearchBox from '../components/UI/SearchBox';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  getFirestore,
+} from '@react-native-firebase/firestore'; // Import Firestore methods
 
 type HomeScreenProps = {
-  navigation: StackNavigationProp<MainStackParamList, 'Main'>;
+  navigation: StackNavigationProp<MainStackParamList, 'Home'>;
 };
 
 // Define the type for the bill item
 interface BillItem {
   id: string;
-  userName: string;
-  invoiceNumber: string;
+  name: string;
+  invoice: string;
   amount: number;
-  date: string;
+  updatedAt: any; // Keep as 'any' for Firestore timestamp
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
+  const [bills, setBills] = useState<BillItem[]>([]); // State to hold bills data
+  const [todayTotal, setTodayTotal] = useState<number>(0); // State to hold today's total amount
+  const [refreshing, setRefreshing] = useState<boolean>(false); // State for refreshing
+
   const handleCalculatore = () => {
     navigation.navigate('calculator');
   };
 
-  // Sample data for 30 users
-  const sampleData: BillItem[] = Array.from({length: 30}, (_, index) => ({
-    id: index.toString(),
-    userName: `User ${index + 1}`,
-    invoiceNumber: `INV-${index + 1}`,
-    amount: Math.floor(Math.random() * 1000) + 100, // Random amount between 100 and 1100
-    date: `25, May 2024, ${Math.floor(Math.random() * 12) + 1}:00 PM`, // Random date and time
-  }));
+  // Fetch today's bills data from Firestore
+  const fetchTodaysBills = async () => {
+    try {
+      const db = getFirestore();
+      const billsCollection = collection(db, 'bills');
+
+      // Calculate the start and end of today
+      const today = new Date();
+      const todayStart = new Date(
+        Date.UTC(
+          today.getUTCFullYear(),
+          today.getUTCMonth(),
+          today.getUTCDate(),
+        ),
+      );
+      const todayEnd = new Date(todayStart);
+      todayEnd.setUTCDate(todayEnd.getUTCDate() + 1); // End of today
+
+      // Create a query to fetch bills updated today
+      const billsQuery = query(
+        billsCollection,
+        where('updatedAt', '>=', todayStart),
+        where('updatedAt', '<', todayEnd),
+      );
+      const billSnapshot = await getDocs(billsQuery);
+      const billList = billSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name,
+          invoice: data.invoice,
+          amount: data.total,
+          updatedAt: data.updatedAt, // Keep as Firestore timestamp
+        } as BillItem; // Cast to BillItem type
+      });
+      setBills(billList);
+      calculateTodayTotal(billList); // Calculate today's total after fetching bills
+    } catch (error) {
+      console.error('Error fetching bills:', error);
+    }
+  };
+
+  // Calculate total amount of today's bills
+  const calculateTodayTotal = (bills: BillItem[]) => {
+    const total = bills.reduce((sum, bill) => {
+      return sum + bill.amount;
+    }, 0);
+
+    setTodayTotal(total);
+  };
+
+  // Refresh function
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchTodaysBills().then(() => setRefreshing(false)); // Fetch bills and stop refreshing
+  };
+
+  useEffect(() => {
+    fetchTodaysBills(); // Fetch today's bills when the component mounts
+  }, []);
 
   const renderItem = ({item}: {item: BillItem}) => (
-    <BillCard
-      name={item.userName}
-      invoice={item.invoiceNumber}
-      amount={item.amount}
-      data={item.date}
-    />
+    <TouchableOpacity onPress={() => navigation.navigate('CalculatorUpdate', {invoice: item.invoice})}>
+      <BillCard
+        name={item.name}
+        invoice={item.invoice}
+        amount={item.amount}
+        date={item.updatedAt.toDate().toLocaleString()} // Format the date for display
+      />
+    </TouchableOpacity>
   );
 
   return (
@@ -49,11 +122,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         // onSearch={handleSearch}
         // value={searchText}
       />
+      <Text style={styles.todayTotalText}>
+        Today's Total: ₹ {todayTotal.toString()}
+      </Text>
       <FlatList
-        data={sampleData}
+        data={[...bills].reverse()}
         renderItem={renderItem}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item.invoice}
         contentContainerStyle={{paddingBottom: 100}} // Add padding for bottom
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
       <View style={styles.toggleWrapper}>
         <RoundButton onPress={handleCalculatore} />
@@ -72,5 +151,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 30,
     right: 20,
+  },
+  todayTotalText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginVertical: 10,
+    textAlign: 'center',
   },
 });
