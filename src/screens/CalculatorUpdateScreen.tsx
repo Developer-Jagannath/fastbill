@@ -6,6 +6,9 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  Button,
+  Modal,
+  TextInput,
 } from 'react-native';
 import CalculatorButton from '../components/UI/CalcultorButton';
 import {StackNavigationProp, StackScreenProps} from '@react-navigation/stack';
@@ -31,13 +34,17 @@ const CalculatorUpdateScreen: React.FC<CalculatorUpdateScreenProps> = ({
   const [total, setTotal] = useState(0); // Total amount
   const flatListRef = useRef<FlatList>(null);
   const {invoice} = route.params;
+  const [profitInput, setProfitInput] = useState(''); // State for profit input
+  const [modalVisible, setModalVisible] = useState(false); // State for modal visibility
   useEffect(() => {
     // Scroll to the end of the FlatList when items change
     if (flatListRef.current) {
       flatListRef.current.scrollToEnd({animated: true});
     }
   }, [items]);
-  useLayoutEffect(()=>{fetchBillData()},[])
+  useLayoutEffect(() => {
+    fetchBillData();
+  }, []);
   const fetchBillData = async () => {
     try {
       if (!invoice) {
@@ -45,10 +52,7 @@ const CalculatorUpdateScreen: React.FC<CalculatorUpdateScreenProps> = ({
         return;
       }
       const db = getFirestore();
-      console.log(invoice)
-      // const billDocRef = doc(db, 'bills', invoice); // Create a reference to the document
-      // const billSnapshot = await getDoc(billDocRef); // Fetch the document data
-      const billDocRef = db.collection('bills')
+      const billDocRef = db.collection('bills');
       const querySnapshot = await getDocs(billDocRef);
       querySnapshot.forEach(doc => {
         if (doc.id == invoice) {
@@ -56,16 +60,9 @@ const CalculatorUpdateScreen: React.FC<CalculatorUpdateScreenProps> = ({
           console.log(doc.id, ' => ', doc.data());
           setItems(doc.data().items);
           setTotal(doc.data().total);
+          setProfitInput(doc.data().profit.toString());
         }
       });
-      console.log(billDocRef);
-
-      // if (billSnapshot.exists()) {
-      //   const billData = billSnapshot.data(); // Get the document data as an object
-      //   console.log('Bill Data:', billData);
-      // } else {
-      //   console.error('Bill document does not exist');
-      // }
     } catch (error) {
       console.error('Error fetching bill data:', error);
     }
@@ -123,25 +120,48 @@ const CalculatorUpdateScreen: React.FC<CalculatorUpdateScreenProps> = ({
   );
 
   // Function to save data to Firestore
-  const saveToFirestore = async () => {
+  const saveToFirestore = async (profit: number) => {
     try {
-      const uid = 'your-unique-user-id'; // Replace with actual user ID
-      const billData = {
-        items,
-        total,
-        createdAt: new Date(),
-      };
-
+      const db = getFirestore();
+      // const billDocRef = doc(db, 'bills', invoice); // Reference to the document
+      // Check if invoice is defined and is a string
+      // if (typeof invoice !== 'string' || !invoice) {
+      //   Alert.alert('Error', 'Invalid invoice ID');
+      //   return; // Exit the function if invoice is invalid
+      // }
+      const uid = invoice.toString();
+      // Update the document with new values
+      console.log("invoice",typeof uid)
       await firestore()
-        .collection('bills') // Collection name
-        .doc(uid) // Document ID (user ID)
-        .set(billData); // Save the bill data
+        .collection('bills')
+        .doc(uid) // Ensure invoice is a valid string
+        .update(
+          {
+            total,
+            profit,
+            items, // Ensure items is an array or a valid field
+            updatedAt: new Date(), // Update the timestamp
+          }
+        );
 
-      Alert.alert('Success', 'Bill saved successfully!');
+      Alert.alert('Success', 'Bill updated successfully!');
     } catch (error) {
       console.error('Error saving bill:', error);
       Alert.alert('Error', 'Failed to save bill. Please try again.');
     }
+  };
+  // Function to handle the "S" button click
+  const handleProfitInput = () => {
+    setModalVisible(true); // Show the modal
+  };
+
+  // Function to handle profit submission
+  const handleProfitSubmit = () => {
+    console.log('Profit saved:', profitInput);
+    setProfitInput(''); // Clear the input
+    setModalVisible(false); // Hide the modal
+    const profitAmount = profitInput.trim() === '' ? 0 : Number(profitInput);
+    saveToFirestore(profitAmount);
   };
 
   return (
@@ -170,8 +190,8 @@ const CalculatorUpdateScreen: React.FC<CalculatorUpdateScreenProps> = ({
         <Text style={{fontSize: 16}}>Total Items: {items.length}</Text>
         <Text style={styles.currentInputText}>{currentInput}</Text>
       </View>
-     {/* Buttons Section */}
-     <View style={styles.buttons}>
+      {/* Buttons Section */}
+      <View style={styles.buttons}>
         {/* Row 1 */}
         <View style={styles.row}>
           <CalculatorButton
@@ -188,7 +208,7 @@ const CalculatorUpdateScreen: React.FC<CalculatorUpdateScreenProps> = ({
           />
           <CalculatorButton
             label="S"
-            onPress={() =>saveToFirestore()}
+            onPress={handleProfitInput} // Call the profit input function
             backgroundColor="#4C6FFF"
             textColor="#fff"
           />
@@ -215,7 +235,7 @@ const CalculatorUpdateScreen: React.FC<CalculatorUpdateScreenProps> = ({
         <View style={styles.row}>
           <CalculatorButton
             label="PR"
-            onPress={()=>navigation.navigate('Print',{bill:items})}
+            onPress={() => navigation.navigate('Print', {bill: items})}
           />
           <CalculatorButton label="0" onPress={() => handlePress('0')} />
           <CalculatorButton
@@ -225,8 +245,29 @@ const CalculatorUpdateScreen: React.FC<CalculatorUpdateScreenProps> = ({
             textColor="#fff"
           />
         </View>
-       
       </View>
+      {/* Profit Input Modal */}
+      <Modal
+        transparent={true}
+        animationType="slide"
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalTitle}>Enter Profit</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Profit Amount"
+            keyboardType="numeric"
+            value={profitInput}
+            onChangeText={setProfitInput}
+            placeholderTextColor="#bfbfbf"
+          />
+          <View style={styles.modalButtons}>
+            <Button title="Cancel" onPress={() => setModalVisible(false)} />
+            <Button title="Save" onPress={handleProfitSubmit} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -281,6 +322,32 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: '#fff',
+  },
+  modalTitle: {
+    fontSize: 20,
+    marginBottom: 20,
+    color: '#fff',
+  },
+  input: {
+    height: 50,
+    borderColor: '#000',
+    borderWidth: 1,
+    marginBottom: 20,
+    width: '80%',
+    paddingHorizontal: 10,
+    color: '#000',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '80%',
   },
 });
 

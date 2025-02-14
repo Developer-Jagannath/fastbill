@@ -9,13 +9,14 @@ interface IProps {
   data?: string;
   amount?: number;
   date: string;
+  profit?: number;
   paymentStatus?: 'Paid' | 'Unpaid' | 'Partial';
 }
 
 const BillCard: React.FC<IProps> = ({
   name,
   invoice,
-  data,
+  profit,
   amount,
   date,
   paymentStatus = 'Paid',
@@ -29,7 +30,7 @@ const BillCard: React.FC<IProps> = ({
         <View style={styles.detailsWrapper}>
           <Text style={styles.titleText}>{name}</Text>
           <Text style={styles.invoiceText}>{invoice}</Text>
-          <Text style={styles.timeText}>{data}</Text>
+          <Text style={styles.timeText}>{profit?.toString()}</Text>
           <Text style={styles.dateText}>{date}</Text>
         </View>
       </View>
@@ -81,10 +82,12 @@ const styles = StyleSheet.create({
     color: '#60a5fa',
   },
   timeText: {
-    fontSize: 13,
-    fontWeight: 400,
+    fontSize: 16,
+    fontWeight: 600,
     // color: '#4b5563',
-    color: '#9ca3af',
+    // color: '#9ca3af',
+    color: 'orange',
+    
   },
   dateText: {
     fontSize: 13,

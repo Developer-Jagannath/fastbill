@@ -6,6 +6,9 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  Modal,
+  TextInput,
+  Button,
 } from 'react-native';
 import CalculatorButton from '../components/UI/CalcultorButton';
 import {StackNavigationProp} from '@react-navigation/stack';
@@ -20,12 +23,16 @@ const CalculatorScreen: FC<IScreenProps> = ({navigation}) => {
   const [items, setItems] = useState<number[]>([]); // List of entered items
   const [total, setTotal] = useState(0); // Total amount
   const flatListRef = useRef<FlatList>(null);
+  const [profitInput, setProfitInput] = useState('0'); // State for profit input
+  const [modalVisible, setModalVisible] = useState(false); // State for modal visibility
+
   useEffect(() => {
     // Scroll to the end of the FlatList when items change
     if (flatListRef.current) {
       flatListRef.current.scrollToEnd({animated: true});
     }
   }, [items]);
+
   const handlePress = (value: string) => {
     if (value === 'C') {
       // Clear all items and reset total
@@ -79,12 +86,13 @@ const CalculatorScreen: FC<IScreenProps> = ({navigation}) => {
   );
 
   // Function to save data to Firestore
-  const saveToFirestore = async () => {
+  const saveToFirestore = async (profit:number) => {
     try {
       const uid = Date.now(); // Use a unique ID for the document
       const billData = {
         items,
         total,
+        profit,
         createdAt: new Date(),
         name:"unknown",
         invoice:Date.now(),
@@ -100,6 +108,20 @@ const CalculatorScreen: FC<IScreenProps> = ({navigation}) => {
       console.error('Error saving bill:', error);
       Alert.alert('Error', 'Failed to save bill. Please try again.');
     }
+  };
+
+  // Function to handle the "S" button click
+  const handleProfitInput = () => {
+    setModalVisible(true); // Show the modal
+  };
+
+  // Function to handle profit submission
+  const handleProfitSubmit = () => {
+    console.log('Profit saved:', profitInput);
+    setProfitInput(''); // Clear the input
+    setModalVisible(false); // Hide the modal
+    const profitAmount = profitInput.trim() === '' ? 0 : Number(profitInput);
+    saveToFirestore(profitAmount);
   };
 
   return (
@@ -147,9 +169,9 @@ const CalculatorScreen: FC<IScreenProps> = ({navigation}) => {
           />
           <CalculatorButton
             label="S"
-            onPress={() =>saveToFirestore()}
+            onPress={handleProfitInput} // Call the profit input function
             backgroundColor="#4C6FFF"
-            textColor="#fff"
+            textColor="#fff" 
           />
         </View>
         {/* Row 2 */}
@@ -187,6 +209,28 @@ const CalculatorScreen: FC<IScreenProps> = ({navigation}) => {
        
       </View>
      
+      {/* Profit Input Modal */}
+      <Modal
+        transparent={true}
+        animationType="slide"
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalTitle}>Enter Profit</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Profit Amount"
+            keyboardType="numeric"
+            value={profitInput}
+            onChangeText={setProfitInput}
+            placeholderTextColor="#bfbfbf"
+          />
+          <View style={styles.modalButtons}>
+            <Button title="Cancel" onPress={() => setModalVisible(false)} />
+            <Button title="Save" onPress={handleProfitSubmit} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -241,6 +285,32 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor:'#fff'
+  },
+  modalTitle: {
+    fontSize: 20,
+    marginBottom: 20,
+    color: '#fff',
+  },
+  input: {
+    height: 50,
+    borderColor: '#000',
+    borderWidth: 1,
+    marginBottom: 20,
+    width: '80%',
+    paddingHorizontal: 10,
+    color: '#000',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '80%',
   },
 });
 

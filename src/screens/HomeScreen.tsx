@@ -32,11 +32,13 @@ interface BillItem {
   invoice: string;
   amount: number;
   updatedAt: any; // Keep as 'any' for Firestore timestamp
+  profit: number;
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   const [bills, setBills] = useState<BillItem[]>([]); // State to hold bills data
   const [todayTotal, setTodayTotal] = useState<number>(0); // State to hold today's total amount
+  const [extraProfit, setExtraProfit] = useState<number>(0); // State to hold today's total amount
   const [refreshing, setRefreshing] = useState<boolean>(false); // State for refreshing
 
   const handleCalculatore = () => {
@@ -75,11 +77,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
           name: data.name,
           invoice: data.invoice,
           amount: data.total,
+          profit: data.profit,
           updatedAt: data.updatedAt, // Keep as Firestore timestamp
         } as BillItem; // Cast to BillItem type
       });
       setBills(billList);
       calculateTodayTotal(billList); // Calculate today's total after fetching bills
+      calculateExtraProfit(billList); // Calculate today's total after fetching bills
     } catch (error) {
       console.error('Error fetching bills:', error);
     }
@@ -94,6 +98,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     setTodayTotal(total);
   };
 
+  // Calculate total amount of today's bills
+  const calculateExtraProfit = (bills: BillItem[]) => {
+    const total = bills.reduce((sum, bill) => {
+      return sum + bill.profit;
+    }, 0);
+    setExtraProfit(total);
+  };
   // Refresh function
   const onRefresh = () => {
     setRefreshing(true);
@@ -105,11 +116,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   }, []);
 
   const renderItem = ({item}: {item: BillItem}) => (
-    <TouchableOpacity onPress={() => navigation.navigate('CalculatorUpdate', {invoice: item.invoice})}>
+    <TouchableOpacity
+      onPress={() =>
+        navigation.navigate('CalculatorUpdate', {invoice: item.invoice})
+      }>
       <BillCard
         name={item.name}
         invoice={item.invoice}
         amount={item.amount}
+        profit={item.profit}
         date={item.updatedAt.toDate().toLocaleString()} // Format the date for display
       />
     </TouchableOpacity>
@@ -122,9 +137,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         // onSearch={handleSearch}
         // value={searchText}
       />
-      <Text style={styles.todayTotalText}>
-        Today's Total: ₹ {todayTotal.toString()}
-      </Text>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          marginHorizontal: 10,
+          backgroundColor:"white",
+          padding:10,
+          borderRadius:10
+        }}>
+        <Text style={styles.todayTotalText}>
+          Today's Total: ₹ {todayTotal.toString()}
+        </Text>
+        <Text style={{...styles.todayTotalText,color:"green"}}>
+          Extra Profit: ₹ {extraProfit.toString()}
+        </Text>
+      </View>
       <FlatList
         data={[...bills].reverse()}
         renderItem={renderItem}
