@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {StackNavigationProp} from '@react-navigation/stack';
@@ -48,6 +49,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   // Fetch today's bills data from Firestore
   const fetchTodaysBills = async () => {
     try {
+      console.log("running")
       const db = getFirestore();
       const billsCollection = collection(db, 'bills');
 
@@ -117,6 +119,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
 
   const renderItem = ({item}: {item: BillItem}) => (
     <TouchableOpacity
+      activeOpacity={0.8}
+      onLongPress={() => {
+        // Confirm deletion
+        Alert.alert(
+          'Delete Bill',
+          'Are you sure you want to delete this bill?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Delete',
+              onPress: () => deleteBill(item.invoice.toString()), // Call deleteBill function
+              style: 'destructive',
+            },
+          ],
+          {cancelable: true},
+        );
+      }}
       onPress={() =>
         navigation.navigate('CalculatorUpdate', {invoice: item.invoice})
       }>
@@ -129,7 +151,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
       />
     </TouchableOpacity>
   );
-
+  // Function to delete the bill from Firestore
+  const deleteBill = async (invoiceId: string) => {
+    try {
+      const db = getFirestore();
+      await db.collection('bills').doc(invoiceId).delete(); // Delete the document
+      Alert.alert('Success', 'Bill deleted successfully!'); // Confirmation message
+      fetchTodaysBills();
+    } catch (error) {
+      console.error('Error deleting bill:', error);
+      Alert.alert('Error', 'Failed to delete the bill. Please try again.'); // Error message
+    }
+  };
   return (
     <View style={styles.container}>
       <SearchBox
@@ -142,14 +175,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
           flexDirection: 'row',
           justifyContent: 'space-between',
           marginHorizontal: 10,
-          backgroundColor:"white",
-          padding:10,
-          borderRadius:10
+          backgroundColor: 'white',
+          padding: 10,
+          borderRadius: 10,
         }}>
         <Text style={styles.todayTotalText}>
           Today's Total: ₹ {todayTotal.toString()}
         </Text>
-        <Text style={{...styles.todayTotalText,color:"green"}}>
+        <Text style={{...styles.todayTotalText, color: 'green'}}>
           Extra Profit: ₹ {extraProfit.toString()}
         </Text>
       </View>
